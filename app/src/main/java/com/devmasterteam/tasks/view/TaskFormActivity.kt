@@ -1,6 +1,8 @@
 package com.devmasterteam.tasks.view
 
 import android.app.DatePickerDialog
+import android.content.Context
+import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.View
@@ -14,12 +16,13 @@ import com.devmasterteam.tasks.databinding.ActivityTaskFormBinding
 import com.devmasterteam.tasks.service.constants.TaskConstants
 import com.devmasterteam.tasks.service.model.PriorityModel
 import com.devmasterteam.tasks.service.model.TaskModel
+import com.devmasterteam.tasks.utils.Navigator
 import com.devmasterteam.tasks.viewmodel.RegisterViewModel
 import com.devmasterteam.tasks.viewmodel.TaskFormViewModel
 import java.text.SimpleDateFormat
 import java.util.Calendar
 
-class TaskFormActivity : AppCompatActivity(), View.OnClickListener,
+class TaskFormActivity : AppCompatActivity(),
     DatePickerDialog.OnDateSetListener {
 
     private var viewModel: TaskFormViewModel? = null
@@ -30,38 +33,33 @@ class TaskFormActivity : AppCompatActivity(), View.OnClickListener,
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        binding = ActivityTaskFormBinding.inflate(layoutInflater)
+        // Layout
+        setContentView(binding?.root)
 
+        initialize()
+    }
+
+    private fun initialize() {
         // Variáveis da classe
         viewModel = ViewModelProvider(this).get(TaskFormViewModel::class.java)
-        binding = ActivityTaskFormBinding.inflate(layoutInflater)
 
         // Eventos
-        binding?.buttonSave?.setOnClickListener(this)
-        binding?.buttonDate?.setOnClickListener(this)
+        setupClick()
 
         viewModel?.loadPriorities()
         loadDataFromActivity()
 
         observe()
 
-        // Layout
-        setContentView(binding?.root)
-    }
-
-    override fun onClick(v: View) {
-        if (v == binding?.buttonDate) {
-            handleDate()
-        } else if (v == binding?.buttonSave) {
-            handleSave()
-        }
     }
 
     override fun onDateSet(v: DatePicker?, year: Int, month: Int, dayOfMonth: Int) {
-        val calendar = Calendar.getInstance()
-        calendar.set(year, month, dayOfMonth)
-
-        val dueDate = dateFormat.format(calendar.time)
-        binding?.buttonDate?.text = dueDate
+        Calendar.getInstance().apply {
+            set(year, month, dayOfMonth)
+            val dueDate = dateFormat.format(time)
+            binding?.buttonDate?.text = dueDate
+        }
     }
 
     private fun loadDataFromActivity() {
@@ -71,7 +69,6 @@ class TaskFormActivity : AppCompatActivity(), View.OnClickListener,
             viewModel?.load(taskIdentification)
         }
     }
-
 
     private fun getIndex(priorityId: Int): Int {
         var index = 0
@@ -99,9 +96,9 @@ class TaskFormActivity : AppCompatActivity(), View.OnClickListener,
             if (it.status()) {
 
                 if (taskIdentification == 0) {
-                    toast("Tarefa criada com sucesso.")
+                    toast(R.string.task_created.toString())
                 } else {
-                    toast("Tarefa atualizada com sucesso.")
+                    toast(R.string.task_updated.toString())
                 }
                 finish()
             } else {
@@ -110,11 +107,13 @@ class TaskFormActivity : AppCompatActivity(), View.OnClickListener,
         }
 
         viewModel?.task?.observe(this) {
-            binding?.editDescription?.setText(it.description)
-            binding?.spinnerPriority?.setSelection(getIndex(it.priorityId))
-            binding?.checkComplete?.isChecked = it.complete
+            binding?.apply {
+                editDescription.setText(it.description)
+                spinnerPriority.setSelection(getIndex(it.priorityId))
+                checkComplete.isChecked = it.complete
+            }
 
-            val date = SimpleDateFormat("yyy-MM-dd").parse(it.dueDate)
+            val date = SimpleDateFormat("yyyy-MM-dd").parse(it.dueDate)
             binding?.buttonDate?.text = SimpleDateFormat("dd/MM/yyyy").format(date)
         }
 
@@ -130,31 +129,51 @@ class TaskFormActivity : AppCompatActivity(), View.OnClickListener,
         Toast.makeText(applicationContext, str, Toast.LENGTH_SHORT).show()
     }
 
+    /*
+           let
+           - não retorna valor
+           - uma cópia da variável
+
+           apply
+           - retorna valor
+           - entra na variável
+    */
     private fun handleSave() {
-        val task = TaskModel().apply {
-            this.id = taskIdentification
-            this.description = binding?.editDescription?.text.toString()
-            this.complete = binding?.checkComplete?.isChecked ?: false
-            this.dueDate = binding?.buttonDate?.text.toString()
-
-            val index = binding?.spinnerPriority?.selectedItemPosition!!
-            this.priorityId = listPriority.get(index).id
+        binding?.apply {
+            val task = TaskModel(
+                id = taskIdentification,
+                description = editDescription.text.toString(),
+                complete = checkComplete.isChecked,
+                dueDate = buttonDate.text.toString(),
+                priorityId = listPriority.get(spinnerPriority.selectedItemPosition).id
+            )
+            viewModel?.save(task)
         }
-
-        viewModel?.save(task)
     }
 
     private fun handleDate() {
-        val calendar = Calendar.getInstance()
-        val year = calendar.get(Calendar.YEAR)
-        val month = calendar.get(Calendar.MONTH)
-        val day = calendar.get(Calendar.DAY_OF_MONTH)
-
-        val datePickerDialog = DatePickerDialog(this, this, year, month, day)
-        // Essa linha eu implementei pra permitir somente datas a partir da data do dia
-        datePickerDialog.datePicker.minDate = calendar.timeInMillis
-        datePickerDialog.show()
+        Calendar.getInstance().apply {
+            val year = get(Calendar.YEAR)
+            val month = get(Calendar.MONTH)
+            val day = get(Calendar.DAY_OF_MONTH)
+            val datePickerDialog =
+                DatePickerDialog(this@TaskFormActivity, this@TaskFormActivity, year, month, day)
+            // Essa linha eu implementei pra permitir somente datas a partir da data do dia
+            datePickerDialog.datePicker.minDate = timeInMillis
+            datePickerDialog.show()
+        }
     }
 
+    private fun setupClick() {
+        binding?.apply {
+            buttonSave.setOnClickListener { handleSave() }
+            buttonDate.setOnClickListener { handleDate() }
+        }
+    }
 
+    companion object {
+        fun newIntent(context: Context) = Intent(context, TaskFormActivity::class.java)
+    }
 }
+
+

@@ -37,6 +37,7 @@ class TaskListViewModel(application: Application) : AndroidViewModel(application
                 }
                 _tasks.value = result
             }
+
             override fun onFailure(message: String) {}
         }
 

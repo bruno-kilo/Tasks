@@ -21,15 +21,17 @@ class RegisterViewModel(application: Application) : AndroidViewModel(application
     val user: LiveData<ValidationModel> = _user
 
     fun create(name: String, email: String, password: String) {
-        personRepository.create(name, email, password, object : APIListener<PersonModel>{
+        personRepository.create(name, email, password, object : APIListener<PersonModel> {
             override fun onSuccess(result: PersonModel) {
-                securityPreferences.store(TaskConstants.SHARED.TOKEN_KEY, result.token)
-                securityPreferences.store(TaskConstants.SHARED.PERSON_KEY, result.personKey)
-                securityPreferences.store(TaskConstants.SHARED.PERSON_NAME, result.name)
+                securityPreferences.apply {
+                    store(TaskConstants.SHARED.TOKEN_KEY, result.token)
+                    store(TaskConstants.SHARED.PERSON_KEY, result.personKey)
+                    store(TaskConstants.SHARED.PERSON_NAME, result.name)
 
-                RetrofitClient.addHeaders(result.token, result.personKey)
+                    RetrofitClient.addHeaders(result.token, result.personKey)
 
-                _user.value = ValidationModel()
+                    _user.value = ValidationModel()
+                }
             }
 
             override fun onFailure(message: String) {

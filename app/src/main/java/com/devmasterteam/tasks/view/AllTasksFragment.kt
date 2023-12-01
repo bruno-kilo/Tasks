@@ -30,8 +30,10 @@ class AllTasksFragment : Fragment() {
         viewModel = ViewModelProvider(this).get(TaskListViewModel::class.java)
         _binding = FragmentAllTasksBinding.inflate(inflater, container, false)
 
-        binding.recyclerAllTasks.layoutManager = LinearLayoutManager(context)
-        binding.recyclerAllTasks.adapter = adapter
+        binding.recyclerAllTasks.apply {
+            layoutManager = LinearLayoutManager(context)
+            adapter = adapter
+        }
 
         taskFilter = requireArguments().getInt(TaskConstants.BUNDLE.TASKFILTER, 0)
 
@@ -77,19 +79,21 @@ class AllTasksFragment : Fragment() {
     }
 
     private fun observe() {
-        viewModel?.tasks?.observe(viewLifecycleOwner) {
-            adapter.updateTasks(it)
-        }
-
-        viewModel?.delete?.observe(viewLifecycleOwner) {
-            if (!it.status()) {
-                Toast.makeText(context, it.message(), Toast.LENGTH_SHORT).show()
+        viewModel?.apply {
+            tasks.observe(viewLifecycleOwner) {
+                adapter.updateTasks(it)
             }
-        }
+            // Repetição do Toast
+            delete.observe(viewLifecycleOwner) {
+                if (!it.status()) {
+                    Toast.makeText(context, it.message(), Toast.LENGTH_SHORT).show()
+                }
+            }
 
-        viewModel?.status?.observe(viewLifecycleOwner) {
-            if (!it.status()) {
-                Toast.makeText(context, it.message(), Toast.LENGTH_SHORT).show()
+            status.observe(viewLifecycleOwner) {
+                if (!it.status()) {
+                    Toast.makeText(context, it.message(), Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }

@@ -19,7 +19,7 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
 
 
     private val personRepository = PersonRepository(application.applicationContext)
-    private  val priorityRepository = PriorityRepository(application.applicationContext)
+    private val priorityRepository = PriorityRepository(application.applicationContext)
     private val securityPreferences = SecurityPreferences(application.applicationContext)
 
     private val _login = MutableLiveData<ValidationModel>()
@@ -35,13 +35,15 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
         personRepository.login(email, password, object : APIListener<PersonModel> {
             override fun onSuccess(result: PersonModel) {
 
-                securityPreferences.store(TaskConstants.SHARED.TOKEN_KEY, result.token)
-                securityPreferences.store(TaskConstants.SHARED.PERSON_KEY, result.personKey)
-                securityPreferences.store(TaskConstants.SHARED.PERSON_NAME, result.name)
+                securityPreferences.apply {
+                    store(TaskConstants.SHARED.TOKEN_KEY, result.token)
+                    store(TaskConstants.SHARED.PERSON_KEY, result.personKey)
+                    store(TaskConstants.SHARED.PERSON_NAME, result.name)
 
-                RetrofitClient.addHeaders(result.token, result.personKey)
+                    RetrofitClient.addHeaders(result.token, result.personKey)
 
-                _login.value = ValidationModel()
+                    _login.value = ValidationModel()
+                }
             }
 
             override fun onFailure(message: String) {
@@ -56,26 +58,31 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
      * Verifica se usuário está logado
      */
     fun verifyLoggedUser() {
-        val token = securityPreferences.get(TaskConstants.SHARED.TOKEN_KEY)
-        val person = securityPreferences.get(TaskConstants.SHARED.PERSON_KEY)
+        securityPreferences.apply {
+            val token = get(TaskConstants.SHARED.TOKEN_KEY)
+            val person = get(TaskConstants.SHARED.PERSON_KEY)
 
-        RetrofitClient.addHeaders(token, person)
+            RetrofitClient.addHeaders(token, person)
 
 
-        val logged = (token != "" && person != "")
-        _loggedUser.value = logged
+            val logged = (token != "" && person != "")
+            _loggedUser.value = logged
 
-        if (!logged) {
-            priorityRepository.list(object : APIListener<List<PriorityModel>>{
-                override fun onSuccess(result: List<PriorityModel>) {
-                    priorityRepository.save(result)
+            if (!logged) {
+                priorityRepository.apply {
+                    list(object : APIListener<List<PriorityModel>> {
+                        override fun onSuccess(result: List<PriorityModel>) {
+                            save(result)
+                        }
+
+                        override fun onFailure(message: String) {
+                            val s = ""
+                        }
+
+                    })
+
                 }
-
-                override fun onFailure(message: String) {
-                    val s = ""
-                }
-
-            })
+            }
         }
     }
 
